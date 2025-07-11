@@ -24,7 +24,7 @@
     const W = () => innerWidth, H = () => innerHeight;
     let engine, world, render, runner;
 
-    function buildTowerSlowly(rows = 15) {
+    function buildTowerSlowly(rows = 15, onComplete) {
       const blockW = 100, blockH = 30;
       const squareSize = 30;
       const gap = 2;
@@ -70,9 +70,11 @@
         i++;
         if (i >= rows) {
             clearInterval(interval);
-            setTimeout(() => { engine.enabled = true; }, 200);   // tiny delay, then go!
+            if (onComplete) {
+              onComplete();
+            }
         }
-      }, 100); // ~0.1s delay per row
+      }
     }
 
     function init() {
