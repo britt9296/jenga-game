@@ -67,7 +67,10 @@
         }
 
         i++;
-        if (i >= rows) clearInterval(interval);
+        if (i >= rows) {
+            clearInterval(interval);
+            setTimeout(() => { engine.enabled = true; }, 200);   // tiny delay, then go!
+        }
       }, 100); // ~0.1s delay per row
     }
 
@@ -105,7 +108,8 @@
         render: { fillStyle: '#444' }
       }));
 
-      // Slowly build tower
+      // Freeze physics, build tower, then resume
+      engine.enabled = false;
       buildTowerSlowly(15);
 
       // Mouse drag
