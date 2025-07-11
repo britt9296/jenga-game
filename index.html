@@ -3,134 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2‑D Jenga Game</title>
-
-  <!-- Page styles -->
+  <title>2‑D Jenga Lite</title>
   <style>
-    :root {
-      --wood:#c77d4a;
-      --bg:#fafafa;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg);overflow:hidden;font-family:system-ui, sans-serif}
+    :root {--wood:#c77d4a; --bg:#f7f7f7;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);overflow:hidden;font-family:system-ui,sans-serif}
     canvas{display:block}
-    #btnReset{
-      position:fixed;top:1rem;right:1rem;z-index:10;
-      padding:.6rem 1rem;border:none;border-radius:.5rem;
-      background:#2c3e50;color:#fff;font-size:1rem;cursor:pointer;
-      box-shadow:0 2px 6px rgba(0,0,0,.2);transition:.2s;
-    }
-    #btnReset:hover{transform:scale(1.05)}
+    #btn{position:fixed;top:1rem;right:1rem;padding:.6rem 1rem;
+         background:#2c3e50;color:#fff;border:0;border-radius:.5rem;
+         cursor:pointer;font-size:1rem;z-index:10}
   </style>
 </head>
 <body>
-  <!-- Restart button -->
-  <button id="btnReset">Restart 🔄</button>
-  <!-- Canvas for Matter.js -->
+  <button id="btn">Restart 🔄</button>
   <canvas id="world"></canvas>
 
-  <!-- Matter.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    // aliases
-    const {Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint} = Matter;
-
-    // globals we need to reset
+    const {Engine,Render,Runner,World,Bodies,Mouse,MouseConstraint,Events} = Matter;
+    const W = () => innerWidth, H = () => innerHeight;
     let engine, world, render, runner;
 
-    // sizing helpers
-    const getW = () => window.innerWidth;
-    const getH = () => window.innerHeight;
-
-    // MAIN INITIALISER ---------------------------------------------------------
-    function init() {
-      // Clean up old world if it exists
-      if (runner) {
-        Matter.Runner.stop(runner);
-        Matter.Render.stop(render);
-        render.canvas.remove();
-      }
-
-      // Engine & world
-      engine = Engine.create();
-      world  = engine.world;
-
-      // Canvas
-      const canvas = document.getElementById('world');
-      canvas.width  = getW();
-      canvas.height = getH();
-
-      // Renderer
-      render = Render.create({
-        canvas,
-        engine,
-        options:{
-          width:getW(),
-          height:getH(),
-          background:getComputedStyle(document.body).getPropertyValue('--bg'),
-          wireframes:false,
-        }
-      });
-      Render.run(render);
-
-      // Runner
-      runner = Runner.create();
-      Runner.run(runner, engine);
-
-      // Ground
-      const ground = Bodies.rectangle(getW()/2, getH()-20, getW(), 40, {
-        isStatic:true, render:{fillStyle:'#444'}
-      });
-      World.add(world, ground);
-
-      // Build Jenga tower -----------------------------------------------------
-      const blockW = 100,
-            blockH = 20,
-            rows   = 18,
-            gap    = 2;            // small gap prevents initial overlap
-      const startY = getH() - 60;  // first row height
-
+    function buildTower() {
+      const blockW = 100, blockH = 20, rows = 15, gap = 2;
+      const startY = H() - 60;
       for (let i = 0; i < rows; i++) {
-        const horizontal = i % 2 === 0;
-        const rowY = startY - i * (blockH + gap);
-        const offset = horizontal ? blockW : blockH;
-
+        const horiz = i % 2 === 0;
+        const y = startY - i * (blockH + gap);
+        const offset = horiz ? blockW : blockH;
         for (let j = 0; j < 3; j++) {
-          const x = getW()/2 + (j - 1) * (offset + gap);
-          const w = horizontal ? blockW : blockH;
-          const h = horizontal ? blockH : blockW;
-          const block = Bodies.rectangle(x, rowY, w, h, {
-            angle: horizontal ? 0 : Math.PI/2,
-            restitution:0.1, friction:0.6, density:0.002,
+          const x = W()/2 + (j-1)*(offset+gap);
+          const w = horiz ? blockW : blockH;
+          const h = horiz ? blockH : blockW;
+          const block = Bodies.rectangle(x,y,w,h,{
+            angle: horiz?0:Math.PI/2,
+            restitution:0.1,
+            friction:0.7,
+            density:0.003,
             render:{fillStyle:getComputedStyle(document.body).getPropertyValue('--wood')}
           });
           World.add(world, block);
         }
       }
+    }
 
-      // Mouse drag control
-      const mouse = Mouse.create(render.canvas);
-      const mConstraint = MouseConstraint.create(engine, {
-        mouse,
-        constraint:{stiffness:0.2, render:{visible:false}}
+    function init() {
+      // clean previous
+      if (runner) {Runner.stop(runner); Render.stop(render); render.canvas.remove();}
+
+      engine = Engine.create();
+      world  = engine.world;
+
+      const canvas = document.getElementById('world');
+      canvas.width = W(); canvas.height = H();
+      render = Render.create({
+        canvas, engine,
+        options:{width:W(),height:H(),background:getComputedStyle(document.body).getPropertyValue('--bg'),wireframes:false}
       });
-      World.add(world, mConstraint);
+      Render.run(render);
+      runner = Runner.create();
+      Runner.run(runner, engine);
+
+      // ground
+      World.add(world, Bodies.rectangle(W()/2, H()-20, W(), 40,{isStatic:true,render:{fillStyle:'#444'}}));
+
+      // build tower row‑by‑row after tiny delays so it settles
+      let row = 0;
+      const timer = setInterval(()=>{
+        if (row===0) buildRow(row);          // build first instantly
+        else Engine.update(engine, 16);      // let physics tick a bit
+        if (++row < 15) buildRow(row);
+        else clearInterval(timer);
+      },75);
+
+      function buildRow(i){
+        const horiz=i%2===0, y=H()-60-i*22, offset=horiz?100:20;
+        for(let j=0;j<3;j++){
+          const x=W()/2+(j-1)*(offset+2);
+          const w=horiz?100:20, h=horiz?20:100;
+          World.add(world,Bodies.rectangle(x,y,w,h,{
+            angle:horiz?0:Math.PI/2,restitution:0.1,friction:0.7,density:0.003,
+            render:{fillStyle:getComputedStyle(document.body).getPropertyValue('--wood')}
+          }));
+        }
+      }
+
+      // mouse
+      const mouse = Mouse.create(render.canvas);
+      World.add(world, MouseConstraint.create(engine,{mouse,constraint:{stiffness:0.2,render:{visible:false}}}));
       render.mouse = mouse;
     }
 
-    // Handle screen resize
-    window.addEventListener('resize', () => {
-      render.canvas.width  = getW();
-      render.canvas.height = getH();
-      Render.lookAt(render, {
-        min:{x:0,y:0}, max:{x:getW(),y:getH()}
-      });
-    });
-
-    // Restart button
-    document.getElementById('btnReset').addEventListener('click', init);
-
-    // Kick everything off once
+    document.getElementById('btn').onclick = init;
+    addEventListener('resize', ()=>{render.canvas.width=W();render.canvas.height=H();});
     init();
   </script>
 </body>
