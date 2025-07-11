@@ -86,7 +86,7 @@
           // Nudge all static bodies (except ground) slightly upward to avoid overlap compression
           for (let body of world.bodies) {
             if (body.isStatic && body.position.y < H() - 60) {
-              Body.translate(body, { x: 0, y: -0.1 });
+              Body.translate(body, { x: 0, y: 0 });
             }
           }
 
