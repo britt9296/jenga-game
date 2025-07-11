@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2‑D Jenga Lite</title>
+  <title>Jenga 2D — Hybrid Tower</title>
   <style>
     :root {--wood:#c77d4a; --bg:#f7f7f7;}
     *{margin:0;padding:0;box-sizing:border-box}
@@ -20,82 +20,96 @@
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    const {Engine,Render,Runner,World,Bodies,Mouse,MouseConstraint,Events} = Matter;
+    const {Engine,Render,Runner,World,Bodies,Mouse,MouseConstraint} = Matter;
     const W = () => innerWidth, H = () => innerHeight;
     let engine, world, render, runner;
 
     function buildTower() {
-      const blockW = 100, blockH = 20, rows = 15, gap = 2;
+      const totalRows = 15;
+      const blockW = 100, blockH = 20;
+      const squareSize = 30;
+      const gap = 2;
       const startY = H() - 60;
-      for (let i = 0; i < rows; i++) {
-        const horiz = i % 2 === 0;
-        const y = startY - i * (blockH + gap);
-        const offset = horiz ? blockW : blockH;
-        for (let j = 0; j < 3; j++) {
-          const x = W()/2 + (j-1)*(offset+gap);
-          const w = horiz ? blockW : blockH;
-          const h = horiz ? blockH : blockW;
-          const block = Bodies.rectangle(x,y,w,h,{
-            angle: horiz?0:Math.PI/2,
-            restitution:0.1,
-            friction:0.7,
-            density:0.003,
-            render:{fillStyle:getComputedStyle(document.body).getPropertyValue('--wood')}
+
+      for (let i = 0; i < totalRows; i++) {
+        const y = startY - i * (blockH + gap * 2);
+
+        if (i % 2 === 0) {
+          // Rectangular wide block (Jenga-style)
+          const block = Bodies.rectangle(W()/2, y, blockW, blockH, {
+            restitution: 0.1,
+            friction: 0.7,
+            density: 0.002,
+            render: { fillStyle: getComputedStyle(document.body).getPropertyValue('--wood') }
           });
           World.add(world, block);
+        } else {
+          // 3 stacked square blocks in a row
+          const spacing = squareSize + gap;
+          for (let j = -1; j <= 1; j++) {
+            const x = W()/2 + j * spacing;
+            const square = Bodies.rectangle(x, y, squareSize, squareSize, {
+              restitution: 0.1,
+              friction: 0.7,
+              density: 0.002,
+              render: { fillStyle: getComputedStyle(document.body).getPropertyValue('--wood') }
+            });
+            World.add(world, square);
+          }
         }
       }
     }
 
     function init() {
-      // clean previous
-      if (runner) {Runner.stop(runner); Render.stop(render); render.canvas.remove();}
+      if (runner) {
+        Runner.stop(runner);
+        Render.stop(render);
+        render.canvas.remove();
+      }
 
       engine = Engine.create();
-      world  = engine.world;
+      world = engine.world;
 
       const canvas = document.getElementById('world');
       canvas.width = W(); canvas.height = H();
+
       render = Render.create({
         canvas, engine,
-        options:{width:W(),height:H(),background:getComputedStyle(document.body).getPropertyValue('--bg'),wireframes:false}
+        options: {
+          width: W(), height: H(),
+          background: getComputedStyle(document.body).getPropertyValue('--bg'),
+          wireframes: false
+        }
       });
+
       Render.run(render);
       runner = Runner.create();
       Runner.run(runner, engine);
 
-      // ground
-      World.add(world, Bodies.rectangle(W()/2, H()-20, W(), 40,{isStatic:true,render:{fillStyle:'#444'}}));
+      // Ground
+      World.add(world, Bodies.rectangle(W()/2, H() - 20, W(), 40, {
+        isStatic: true,
+        render: { fillStyle: '#444' }
+      }));
 
-      // build tower row‑by‑row after tiny delays so it settles
-      let row = 0;
-      const timer = setInterval(()=>{
-        if (row===0) buildRow(row);          // build first instantly
-        else Engine.update(engine, 16);      // let physics tick a bit
-        if (++row < 15) buildRow(row);
-        else clearInterval(timer);
-      },75);
+      // Build hybrid tower
+      buildTower();
 
-      function buildRow(i){
-        const horiz=i%2===0, y=H()-60-i*22, offset=horiz?100:20;
-        for(let j=0;j<3;j++){
-          const x=W()/2+(j-1)*(offset+2);
-          const w=horiz?100:20, h=horiz?20:100;
-          World.add(world,Bodies.rectangle(x,y,w,h,{
-            angle:horiz?0:Math.PI/2,restitution:0.1,friction:0.7,density:0.003,
-            render:{fillStyle:getComputedStyle(document.body).getPropertyValue('--wood')}
-          }));
-        }
-      }
-
-      // mouse
+      // Mouse drag
       const mouse = Mouse.create(render.canvas);
-      World.add(world, MouseConstraint.create(engine,{mouse,constraint:{stiffness:0.2,render:{visible:false}}}));
+      World.add(world, MouseConstraint.create(engine, {
+        mouse,
+        constraint: { stiffness: 0.2, render: { visible: false } }
+      }));
       render.mouse = mouse;
     }
 
     document.getElementById('btn').onclick = init;
-    addEventListener('resize', ()=>{render.canvas.width=W();render.canvas.height=H();});
+    addEventListener('resize', () => {
+      render.canvas.width = W();
+      render.canvas.height = H();
+    });
+
     init();
   </script>
 </body>
