@@ -109,10 +109,13 @@
         render: { fillStyle: '#444' }
       }));
 
-      // Freeze physics, build tower, then resume
+      // Freeze physics
       engine.enabled = false;
       engine.world.gravity.y = 0;
+
+      // Build Tower
       buildTowerSlowly(15, () => {
+        // Restore gravity and resume engine after building tower
         engine.world.gravity.y = 1;
         engine.enabled = true;
       });
