@@ -38,8 +38,9 @@
           // Horizontal block
           const block = Bodies.rectangle(W() / 2, y, blockW, blockH, {
             restitution: 0,
-            friction: 0.9,
-            frictionAir: 0.04,
+            friction: 1.0,
+            frictionStatic: 1.0,
+            frictionAir: 0.05,
             density: 0.0015,
             render: {
               fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
