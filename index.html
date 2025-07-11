@@ -46,6 +46,7 @@
           const block = Bodies.rectangle(W() / 2, y, blockW, blockH, {
             isStatic: true,
             inertia: Infinity,
+            angle: 0,
             restitution: 0,
             friction: 1.0,
             frictionStatic: 1.0,
@@ -64,6 +65,7 @@
             const square = Bodies.rectangle(x, y, squareSize, squareSize, {
               isStatic: true,
               inertia: Infinity,
+              angle:0,
               restitution: 0,
               friction: 1.0,
               frictionStatic: 1.0,
