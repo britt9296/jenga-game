@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jenga 2D — Stable Hybrid Tower</title>
+  <title>Jenga 2D — Independent Squares Tower</title>
   <style>
     :root { --wood:#c77d4a; --bg:#f7f7f7; }
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -30,7 +30,7 @@
     function buildTowerSlowly(rows = 15, onComplete) {
       const blockW = 100, blockH = 30;
       const squareSize = 30;
-      const gap = 2;
+      const gap = 0;  // No gap between squares for better support
       const rowHeight = blockH;
       const groundHeight = 40;
       const groundTopY = H() - groundHeight;
@@ -39,11 +39,10 @@
       let i = 0;
 
       const interval = setInterval(() => {
-        // Add a tiny vertical gap of 0.5 to avoid overlaps and compression
-        const y = startY - i * (rowHeight + 0.5);
+        const y = startY - i * (rowHeight + 0.5); // Tiny vertical gap to avoid compression
 
         if (i % 2 === 0) {
-          // Horizontal block
+          // Horizontal plank
           const block = Bodies.rectangle(W() / 2, y, blockW, blockH, {
             isStatic: true,
             inertia: Infinity,
@@ -58,35 +57,38 @@
           });
           World.add(world, block);
         } else {
-          // One solid row block (instead of 3 squares) for stability
-          const fullWidth = 3 * squareSize + 2 * gap;
-          const squareRow = Bodies.rectangle(W() / 2, y, fullWidth, squareSize, {
-            isStatic: true,
-            inertia: Infinity,
-            restitution: 0,
-            friction: 1.0,
-            frictionStatic: 1.0,
-            frictionAir: 0.1,
-            density: 0.0012,
-            render: {
-              fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
-            }
-          });
-          World.add(world, squareRow);
+          // 3 independent squares
+          const spacing = squareSize + gap;
+          for (let j = -1; j <= 1; j++) {
+            const x = W() / 2 + j * spacing;
+            const square = Bodies.rectangle(x, y, squareSize, squareSize, {
+              isStatic: true,
+              inertia: Infinity,
+              restitution: 0,
+              friction: 1.0,
+              frictionStatic: 1.0,
+              frictionAir: 0.1,
+              density: 0.0012,
+              render: {
+                fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
+              }
+            });
+            World.add(world, square);
+          }
         }
 
         i++;
         if (i >= rows) {
           clearInterval(interval);
 
-          // Small vertical nudge upwards to avoid initial overlap compression
+          // Nudge all static bodies (except ground) slightly upward to avoid overlap compression
           for (let body of world.bodies) {
             if (body.isStatic && body.position.y < H() - 60) {
               Body.translate(body, { x: 0, y: -0.1 });
             }
           }
 
-          // Enable physics after short delay, zeroing velocities for stability
+          // After a short delay, make bodies dynamic and zero velocities to reduce sudden sliding
           setTimeout(() => {
             for (let body of world.bodies) {
               if (body.isStatic && body.position.y < H() - 60) {
@@ -112,7 +114,7 @@
       engine = Engine.create();
       world = engine.world;
 
-      // Increase iterations to improve stability and reduce bounce
+      // Increase solver iterations to improve stability
       engine.positionIterations = 20;
       engine.velocityIterations = 10;
       engine.constraintIterations = 4;
@@ -135,6 +137,7 @@
       runner = Runner.create();
       Runner.run(runner, engine);
 
+      // Ground
       World.add(world, Bodies.rectangle(W() / 2, H() - 20, W(), 40, {
         isStatic: true,
         friction: 1.0,
