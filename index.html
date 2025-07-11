@@ -29,7 +29,9 @@
       const squareSize = 30;
       const gap = 2;
       const rowHeight = blockH;
-      const startY = H() - 150 - blockH / 2;
+      const groundHeight = 40;
+      const groundTopY = H() - groundHeight;
+      const startY = groundTopY - blockH / 2;
       let i = 0;
 
       const interval = setInterval(() => {
