@@ -111,6 +111,7 @@
 
       // Freeze physics, build tower, then resume
       engine.enabled = false;
+      engine.world.gravity.y = 0;
       buildTowerSlowly(15);
 
       // Mouse drag
