@@ -2,116 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jenga Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2‑D Jenga Game</title>
+
+  <!-- Page styles -->
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
+    :root {
+      --wood:#c77d4a;
+      --bg:#fafafa;
     }
-    canvas {
-      display: block;
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);overflow:hidden;font-family:system-ui, sans-serif}
+    canvas{display:block}
+    #btnReset{
+      position:fixed;top:1rem;right:1rem;z-index:10;
+      padding:.6rem 1rem;border:none;border-radius:.5rem;
+      background:#2c3e50;color:#fff;font-size:1rem;cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,.2);transition:.2s;
     }
+    #btnReset:hover{transform:scale(1.05)}
   </style>
 </head>
 <body>
+  <!-- Restart button -->
+  <button id="btnReset">Restart 🔄</button>
+  <!-- Canvas for Matter.js -->
   <canvas id="world"></canvas>
 
-  <!-- Matter.js Physics Engine from CDN -->
+  <!-- Matter.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    const { Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint } = Matter;
+    // aliases
+    const {Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint} = Matter;
 
-    const engine = Engine.create();
-    const world = engine.world;
+    // globals we need to reset
+    let engine, world, render, runner;
 
-    const canvas = document.getElementById('world');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // sizing helpers
+    const getW = () => window.innerWidth;
+    const getH = () => window.innerHeight;
 
-    const render = Render.create({
-      canvas: canvas,
-      engine: engine,
-      options: {
-        wireframes: false,
-        background: '#fafafa',
-        width: window.innerWidth,
-        height: window.innerHeight,
+    // MAIN INITIALISER ---------------------------------------------------------
+    function init() {
+      // Clean up old world if it exists
+      if (runner) {
+        Matter.Runner.stop(runner);
+        Matter.Render.stop(render);
+        render.canvas.remove();
       }
-    });
 
-    Render.run(render);
-    const runner = Runner.create();
-    Runner.run(runner, engine);
+      // Engine & world
+      engine = Engine.create();
+      world  = engine.world;
 
-    // Add ground
-    const ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight - 20, window.innerWidth, 40, {
-      isStatic: true,
-      render: { fillStyle: '#222' }
-    });
-    World.add(world, ground);
+      // Canvas
+      const canvas = document.getElementById('world');
+      canvas.width  = getW();
+      canvas.height = getH();
 
-    // Add Jenga tower blocks
-    const blockWidth = 100;
-    const blockHeight = 20;
-    const rows = 18;
-    const tower = [];
+      // Renderer
+      render = Render.create({
+        canvas,
+        engine,
+        options:{
+          width:getW(),
+          height:getH(),
+          background:getComputedStyle(document.body).getPropertyValue('--bg'),
+          wireframes:false,
+        }
+      });
+      Render.run(render);
 
-    for (let i = 0; i < rows; i++) {
-  const isHorizontal = i % 2 === 0;
-  const y = window.innerHeight - 60 - i * (blockHeight + 2); // extra vertical spacing
+      // Runner
+      runner = Runner.create();
+      Runner.run(runner, engine);
 
-  for (let j = 0; j < 3; j++) {
-    const offset = isHorizontal ? blockWidth : blockHeight;
-    const x = window.innerWidth / 2 + (j - 1) * (offset + 2);
+      // Ground
+      const ground = Bodies.rectangle(getW()/2, getH()-20, getW(), 40, {
+        isStatic:true, render:{fillStyle:'#444'}
+      });
+      World.add(world, ground);
 
-    const width = isHorizontal ? blockWidth : blockHeight;
-    const height = isHorizontal ? blockHeight : blockWidth;
+      // Build Jenga tower -----------------------------------------------------
+      const blockW = 100,
+            blockH = 20,
+            rows   = 18,
+            gap    = 2;            // small gap prevents initial overlap
+      const startY = getH() - 60;  // first row height
 
-    const block = Bodies.rectangle(x, y, width, height, {
-      restitution: 0.1,
-      friction: 0.6,
-      density: 0.002,
-      render: {
-        fillStyle: '#c77d4a',
-      }
-    });
+      for (let i = 0; i < rows; i++) {
+        const horizontal = i % 2 === 0;
+        const rowY = startY - i * (blockH + gap);
+        const offset = horizontal ? blockW : blockH;
 
-    tower.push(block);
-  }
-}
-
-
-    World.add(world, tower);
-
-    // Add mouse control
-    const mouse = Mouse.create(render.canvas);
-    const mouseConstraint = MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: {
-        stiffness: 0.2,
-        render: {
-          visible: false
+        for (let j = 0; j < 3; j++) {
+          const x = getW()/2 + (j - 1) * (offset + gap);
+          const w = horizontal ? blockW : blockH;
+          const h = horizontal ? blockH : blockW;
+          const block = Bodies.rectangle(x, rowY, w, h, {
+            angle: horizontal ? 0 : Math.PI/2,
+            restitution:0.1, friction:0.6, density:0.002,
+            render:{fillStyle:getComputedStyle(document.body).getPropertyValue('--wood')}
+          });
+          World.add(world, block);
         }
       }
-    });
 
-    World.add(world, mouseConstraint);
-    render.mouse = mouse;
+      // Mouse drag control
+      const mouse = Mouse.create(render.canvas);
+      const mConstraint = MouseConstraint.create(engine, {
+        mouse,
+        constraint:{stiffness:0.2, render:{visible:false}}
+      });
+      World.add(world, mConstraint);
+      render.mouse = mouse;
+    }
 
-    // Resize canvas on window resize
+    // Handle screen resize
     window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      render.bounds.max.x = window.innerWidth;
-      render.bounds.max.y = window.innerHeight;
-      render.options.width = window.innerWidth;
-      render.options.height = window.innerHeight;
+      render.canvas.width  = getW();
+      render.canvas.height = getH();
       Render.lookAt(render, {
-        min: { x: 0, y: 0 },
-        max: { x: window.innerWidth, y: window.innerHeight }
+        min:{x:0,y:0}, max:{x:getW(),y:getH()}
       });
     });
+
+    // Restart button
+    document.getElementById('btnReset').addEventListener('click', init);
+
+    // Kick everything off once
+    init();
   </script>
 </body>
 </html>
