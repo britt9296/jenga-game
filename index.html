@@ -1,84 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>2D Jenga with Matter.js</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jenga Game</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #f5f5f5; }
-    canvas { display: block; }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
   </style>
 </head>
 <body>
+  <canvas id="world"></canvas>
+
+  <!-- Matter.js Physics Engine from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    const { Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint, Events } = Matter;
+    const { Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint } = Matter;
 
     const engine = Engine.create();
     const world = engine.world;
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const canvas = document.getElementById('world');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     const render = Render.create({
-      element: document.body,
+      canvas: canvas,
       engine: engine,
       options: {
-        width,
-        height,
         wireframes: false,
-        background: '#fdfdfd'
+        background: '#fafafa',
+        width: window.innerWidth,
+        height: window.innerHeight,
       }
     });
 
     Render.run(render);
-    Runner.run(Runner.create(), engine);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
 
-    // Ground
-    const ground = Bodies.rectangle(width / 2, height - 20, width, 40, { isStatic: true });
+    // Add ground
+    const ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight - 20, window.innerWidth, 40, {
+      isStatic: true,
+      render: { fillStyle: '#222' }
+    });
     World.add(world, ground);
 
-    // Jenga Tower
+    // Add Jenga tower blocks
     const blockWidth = 100;
     const blockHeight = 20;
     const rows = 18;
-    const startX = width / 2;
-    const startY = height - 40;
+    const tower = [];
 
     for (let i = 0; i < rows; i++) {
-      const y = startY - i * blockHeight;
-      const blocks = [];
+      const y = window.innerHeight - 40 - i * blockHeight;
       for (let j = 0; j < 3; j++) {
-        const offset = (j - 1) * blockWidth;
-        const x = startX + offset;
+        const x = window.innerWidth / 2 + (j - 1) * blockWidth;
         const angle = i % 2 === 0 ? 0 : Math.PI / 2;
-        blocks.push(
-          Bodies.rectangle(x, y, blockWidth, blockHeight, {
-            angle,
-            chamfer: { radius: 2 },
-            render: { fillStyle: '#c49a6c' }
-          })
-        );
+        const width = i % 2 === 0 ? blockWidth : blockHeight;
+        const height = i % 2 === 0 ? blockHeight : blockWidth;
+
+        const block = Bodies.rectangle(x, y, width, height, {
+          restitution: 0.3,
+          render: {
+            fillStyle: '#c77d4a',
+          }
+        });
+        tower.push(block);
       }
-      World.add(world, blocks);
     }
 
-    // Mouse Control
+    World.add(world, tower);
+
+    // Add mouse control
     const mouse = Mouse.create(render.canvas);
     const mouseConstraint = MouseConstraint.create(engine, {
-      mouse,
+      mouse: mouse,
       constraint: {
         stiffness: 0.2,
-        render: { visible: false }
+        render: {
+          visible: false
+        }
       }
     });
 
     World.add(world, mouseConstraint);
     render.mouse = mouse;
 
-    // Resize handling
+    // Resize canvas on window resize
     window.addEventListener('resize', () => {
-      render.canvas.width = window.innerWidth;
-      render.canvas.height = window.innerHeight;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      render.bounds.max.x = window.innerWidth;
+      render.bounds.max.y = window.innerHeight;
+      render.options.width = window.innerWidth;
+      render.options.height = window.innerHeight;
+      Render.lookAt(render, {
+        min: { x: 0, y: 0 },
+        max: { x: window.innerWidth, y: window.innerHeight }
+      });
     });
   </script>
 </body>
