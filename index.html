@@ -2,16 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Jenga 2D — Stable Hybrid Tower</title>
   <style>
-    :root {--wood:#c77d4a; --bg:#f7f7f7;}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:var(--bg);overflow:hidden;font-family:system-ui,sans-serif}
-    canvas{display:block}
-    #btn{position:fixed;top:1rem;right:1rem;padding:.6rem 1rem;
-         background:#2c3e50;color:#fff;border:0;border-radius:.5rem;
-         cursor:pointer;font-size:1rem;z-index:10}
+    :root { --wood:#c77d4a; --bg:#f7f7f7; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); overflow:hidden; font-family:system-ui,sans-serif; }
+    canvas { display:block; }
+    #btn {
+      position:fixed; top:1rem; right:1rem;
+      padding:.6rem 1rem;
+      background:#2c3e50; color:#fff; border:0; border-radius:.5rem;
+      cursor:pointer; font-size:1rem; z-index:10;
+    }
   </style>
 </head>
 <body>
@@ -29,7 +32,6 @@
       const squareSize = 30;
       const gap = 2;
       const rowHeight = blockH;
-      
       const groundHeight = 40;
       const groundTopY = H() - groundHeight;
       const startY = groundTopY - blockH / 2;
@@ -37,7 +39,8 @@
       let i = 0;
 
       const interval = setInterval(() => {
-        const y = startY - i * (rowHeight + 0.1);
+        // Add a tiny vertical gap of 0.5 to avoid overlaps and compression
+        const y = startY - i * (rowHeight + 0.5);
 
         if (i % 2 === 0) {
           // Horizontal block
@@ -48,46 +51,51 @@
             friction: 1.0,
             frictionStatic: 1.0,
             frictionAir: 0.1,
-            density: 0.005,
+            density: 0.0012,
             render: {
               fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
             }
           });
           World.add(world, block);
         } else {
-          // 3 stacked squares
-          const spacing = squareSize + gap;
-          for (let j = -1; j <= 1; j++) {
-            const x = W() / 2 + j * spacing;
-            const square = Bodies.rectangle(x, y, squareSize, squareSize, {
-              isStatic: true,
-              inertia: Infinity,
-              restitution: 0,
-              friction: 1.0,
-              frictionStatic: 1.0,
-              frictionAir: 0.1,
-              density: 0.005,
-              render: {
-                fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
-              }
-            });
-            World.add(world, square);
-          }
+          // One solid row block (instead of 3 squares) for stability
+          const fullWidth = 3 * squareSize + 2 * gap;
+          const squareRow = Bodies.rectangle(W() / 2, y, fullWidth, squareSize, {
+            isStatic: true,
+            inertia: Infinity,
+            restitution: 0,
+            friction: 1.0,
+            frictionStatic: 1.0,
+            frictionAir: 0.1,
+            density: 0.0012,
+            render: {
+              fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
+            }
+          });
+          World.add(world, squareRow);
         }
 
         i++;
         if (i >= rows) {
           clearInterval(interval);
 
-          // Make all tower blocks dynamic
+          // Small vertical nudge upwards to avoid initial overlap compression
           for (let body of world.bodies) {
-            if (body.isStatic) {
-              if (body.position.y > H() - 60) continue; // skip ground
-              Body.setStatic(body, false);
-              Body.setVelocity(body, { x: 0, y: 0 });
-              Body.setAngularVelocity(body, 0);
+            if (body.isStatic && body.position.y < H() - 60) {
+              Body.translate(body, { x: 0, y: -0.1 });
             }
           }
+
+          // Enable physics after short delay, zeroing velocities for stability
+          setTimeout(() => {
+            for (let body of world.bodies) {
+              if (body.isStatic && body.position.y < H() - 60) {
+                Body.setStatic(body, false);
+                Body.setVelocity(body, { x: 0, y: 0 });
+                Body.setAngularVelocity(body, 0);
+              }
+            }
+          }, 50);
 
           if (onComplete) onComplete();
         }
@@ -103,6 +111,11 @@
 
       engine = Engine.create();
       world = engine.world;
+
+      // Increase iterations to improve stability and reduce bounce
+      engine.positionIterations = 20;
+      engine.velocityIterations = 10;
+      engine.constraintIterations = 4;
 
       const canvas = document.getElementById('world');
       canvas.width = W();
@@ -122,7 +135,6 @@
       runner = Runner.create();
       Runner.run(runner, engine);
 
-      // Ground
       World.add(world, Bodies.rectangle(W() / 2, H() - 20, W(), 40, {
         isStatic: true,
         friction: 1.0,
@@ -131,11 +143,8 @@
         render: { fillStyle: '#444' }
       }));
 
-      buildTowerSlowly(15, () => {
-        console.log("Tower finished and unfrozen!");
-      });
+      buildTowerSlowly(15);
 
-      // Mouse drag
       const mouse = Mouse.create(render.canvas);
       World.add(world, MouseConstraint.create(engine, {
         mouse,
@@ -146,8 +155,10 @@
 
     document.getElementById('btn').onclick = init;
     addEventListener('resize', () => {
-      render.canvas.width = W();
-      render.canvas.height = H();
+      if (render && render.canvas) {
+        render.canvas.width = W();
+        render.canvas.height = H();
+      }
     });
 
     init();
