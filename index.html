@@ -58,22 +58,29 @@
     const tower = [];
 
     for (let i = 0; i < rows; i++) {
-      const y = window.innerHeight - 40 - i * blockHeight;
-      for (let j = 0; j < 3; j++) {
-        const x = window.innerWidth / 2 + (j - 1) * blockWidth;
-        const angle = i % 2 === 0 ? 0 : Math.PI / 2;
-        const width = i % 2 === 0 ? blockWidth : blockHeight;
-        const height = i % 2 === 0 ? blockHeight : blockWidth;
+  const isHorizontal = i % 2 === 0;
+  const y = window.innerHeight - 60 - i * (blockHeight + 2); // extra vertical spacing
 
-        const block = Bodies.rectangle(x, y, width, height, {
-          restitution: 0.3,
-          render: {
-            fillStyle: '#c77d4a',
-          }
-        });
-        tower.push(block);
+  for (let j = 0; j < 3; j++) {
+    const offset = isHorizontal ? blockWidth : blockHeight;
+    const x = window.innerWidth / 2 + (j - 1) * (offset + 2);
+
+    const width = isHorizontal ? blockWidth : blockHeight;
+    const height = isHorizontal ? blockHeight : blockWidth;
+
+    const block = Bodies.rectangle(x, y, width, height, {
+      restitution: 0.1,
+      friction: 0.6,
+      density: 0.002,
+      render: {
+        fillStyle: '#c77d4a',
       }
-    }
+    });
+
+    tower.push(block);
+  }
+}
+
 
     World.add(world, tower);
 
