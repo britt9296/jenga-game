@@ -100,6 +100,8 @@
       // Ground
       World.add(world, Bodies.rectangle(W() / 2, H() - 20, W(), 40, {
         isStatic: true,
+        friction: 1.0,
+        frictionStatic: 1.0,
         render: { fillStyle: '#444' }
       }));
 
