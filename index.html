@@ -29,9 +29,12 @@
       const squareSize = 30;
       const gap = 2;
       const rowHeight = blockH;
+      
+      // Compute proper starting Y so tower sits on ground
       const groundHeight = 40;
       const groundTopY = H() - groundHeight;
       const startY = groundTopY - blockH / 2;
+
       let i = 0;
 
       const interval = setInterval(() => {
@@ -71,10 +74,8 @@
 
         i++;
         if (i >= rows) {
-            clearInterval(interval);
-            if (onComplete) {
-              onComplete();
-            }
+          clearInterval(interval);
+          if (onComplete) onComplete();
         }
       }, 100);
     }
@@ -90,12 +91,14 @@
       world = engine.world;
 
       const canvas = document.getElementById('world');
-      canvas.width = W(); canvas.height = H();
+      canvas.width = W();
+      canvas.height = H();
 
       render = Render.create({
         canvas, engine,
         options: {
-          width: W(), height: H(),
+          width: W(),
+          height: H(),
           background: getComputedStyle(document.body).getPropertyValue('--bg'),
           wireframes: false
         }
@@ -113,15 +116,18 @@
         render: { fillStyle: '#444' }
       }));
 
-      // Freeze physics
-      engine.enabled = false;
-      engine.world.gravity.y = 0;
+      // Freeze physics by stopping time
+      engine.timing.timeScale = 0;
 
-      // Build Tower
+      // Build tower, then resume physics
       buildTowerSlowly(15, () => {
-        // Restore gravity and resume engine after building tower
-        engine.world.gravity.y = 1;
-        engine.enabled = true;
+        // Smoothly ramp up physics for nicer effect
+        let t = 0;
+        const interval = setInterval(() => {
+          t += 0.1;
+          engine.timing.timeScale = Math.min(t, 1);
+          if (t >= 1) clearInterval(interval);
+        }, 50);
       });
 
       // Mouse drag
