@@ -28,11 +28,12 @@
       const blockW = 100, blockH = 30;
       const squareSize = 30;
       const gap = 2;
-      const startY = H() - 150;
+      const rowHeight = blockH;
+      const startY = H() - 40 - blockH / 2;
       let i = 0;
 
       const interval = setInterval(() => {
-        const y = startY - i * (blockH + gap);
+        const y = startY - i * rowHeight;
 
         if (i % 2 === 0) {
           // Horizontal block
