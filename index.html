@@ -39,7 +39,7 @@
       let i = 0;
 
       const interval = setInterval(() => {
-        const y = startY - i * (rowHeight + 0); // Tiny vertical gap to avoid compression
+        const y = startY - i * (rowHeight + 0.1); // Tiny vertical gap to avoid compression
 
         if (i % 2 === 0) {
           // Horizontal plank
