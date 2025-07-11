@@ -37,11 +37,13 @@
       let i = 0;
 
       const interval = setInterval(() => {
-        const y = startY - i * rowHeight;
+        const y = startY - i * (rowHeight + 0.1);
 
         if (i % 2 === 0) {
+          // Horizontal block
           const block = Bodies.rectangle(W() / 2, y, blockW, blockH, {
             isStatic: true,
+            inertia: Infinity,
             restitution: 0,
             friction: 1.0,
             frictionStatic: 1.0,
@@ -53,11 +55,13 @@
           });
           World.add(world, block);
         } else {
+          // 3 stacked squares
           const spacing = squareSize + gap;
           for (let j = -1; j <= 1; j++) {
             const x = W() / 2 + j * spacing;
             const square = Bodies.rectangle(x, y, squareSize, squareSize, {
               isStatic: true,
+              inertia: Infinity,
               restitution: 0,
               friction: 1.0,
               frictionStatic: 1.0,
@@ -74,16 +78,17 @@
         i++;
         if (i >= rows) {
           clearInterval(interval);
-          
-          // make all tower blocks dynamic
+
+          // Make all tower blocks dynamic
           for (let body of world.bodies) {
             if (body.isStatic) {
-              // skip the ground
-              if (body.position.y > H() - 60) continue;
+              if (body.position.y > H() - 60) continue; // skip ground
               Body.setStatic(body, false);
+              Body.setVelocity(body, { x: 0, y: 0 });
+              Body.setAngularVelocity(body, 0);
             }
           }
-          
+
           if (onComplete) onComplete();
         }
       }, 100);
@@ -122,10 +127,10 @@
         isStatic: true,
         friction: 1.0,
         frictionStatic: 1.0,
+        restitution: 0,
         render: { fillStyle: '#444' }
       }));
 
-      // No need to freeze time
       buildTowerSlowly(15, () => {
         console.log("Tower finished and unfrozen!");
       });
