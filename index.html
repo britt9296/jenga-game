@@ -20,7 +20,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
-    const { Engine, Render, Runner, World, Bodies, Mouse, MouseConstraint } = Matter;
+    const { Engine, Render, Runner, World, Bodies, Body, Mouse, MouseConstraint } = Matter;
     const W = () => innerWidth, H = () => innerHeight;
     let engine, world, render, runner;
 
@@ -30,7 +30,6 @@
       const gap = 2;
       const rowHeight = blockH;
       
-      // Compute proper starting Y so tower sits on ground
       const groundHeight = 40;
       const groundTopY = H() - groundHeight;
       const startY = groundTopY - blockH / 2;
@@ -41,29 +40,29 @@
         const y = startY - i * rowHeight;
 
         if (i % 2 === 0) {
-          // Horizontal block
           const block = Bodies.rectangle(W() / 2, y, blockW, blockH, {
+            isStatic: true,
             restitution: 0,
             friction: 1.0,
             frictionStatic: 1.0,
             frictionAir: 0.1,
-            density: 0.01,
+            density: 0.0012,
             render: {
               fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
             }
           });
           World.add(world, block);
         } else {
-          // 3 stacked squares
           const spacing = squareSize + gap;
           for (let j = -1; j <= 1; j++) {
             const x = W() / 2 + j * spacing;
             const square = Bodies.rectangle(x, y, squareSize, squareSize, {
+              isStatic: true,
               restitution: 0,
               friction: 1.0,
               frictionStatic: 1.0,
               frictionAir: 0.1,
-              density: 0.01,
+              density: 0.0012,
               render: {
                 fillStyle: getComputedStyle(document.body).getPropertyValue('--wood')
               }
@@ -75,6 +74,16 @@
         i++;
         if (i >= rows) {
           clearInterval(interval);
+          
+          // make all tower blocks dynamic
+          for (let body of world.bodies) {
+            if (body.isStatic) {
+              // skip the ground
+              if (body.position.y > H() - 60) continue;
+              Body.setStatic(body, false);
+            }
+          }
+          
           if (onComplete) onComplete();
         }
       }, 100);
@@ -116,18 +125,9 @@
         render: { fillStyle: '#444' }
       }));
 
-      // Freeze physics by stopping time
-      engine.timing.timeScale = 0;
-
-      // Build tower, then resume physics
+      // No need to freeze time
       buildTowerSlowly(15, () => {
-        // Smoothly ramp up physics for nicer effect
-        let t = 0;
-        const interval = setInterval(() => {
-          t += 0.1;
-          engine.timing.timeScale = Math.min(t, 1);
-          if (t >= 1) clearInterval(interval);
-        }, 50);
+        console.log("Tower finished and unfrozen!");
       });
 
       // Mouse drag
