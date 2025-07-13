@@ -81,7 +81,7 @@
       if (runner) {
         Runner.stop(runner);
         Render.stop(render);
-        render.canvas.remove();
+        render.canvas.getContext('2d').clearRect(0, 0, render.canvas.width, render.canvas.height);
         render.textures = {};
       }
 
